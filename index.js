@@ -63,6 +63,7 @@ let corsMiddleware = (req, res, next) => {
 
 
 let exec_env = process.env.DB_ENV || 'development';
+console.log(process.env.DB_ENV);
 const knexConfig = db_config[exec_env];
 let bookshelf = initBookshelf(knexConfig);
 let api = initApi(bookshelf)
