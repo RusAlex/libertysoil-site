@@ -24,30 +24,8 @@ import React from 'react';
 import { combineHandlers, combineHandlersAsync } from './utils/loader';
 
 import App from './pages/app';
-import Auth from './pages/auth';
-import NewPassword from './pages/new-password';
-import PasswordReset from './pages/password-reset';
-import PostPage from './pages/post';
-import PostEditPage from './pages/post-edit';
-import UserPage from './pages/user';
-import UserLikesPage from './pages/user-likes';
-import UserFavoritesPage from './pages/user-favorites';
-import AboutUserPage from './pages/user-bio';
-import SchoolPage from './pages/school';
-import SchoolEditPage from './pages/school-edit';
-import SettingsPage from './pages/settings';
-import SettingsPasswordPage from './pages/settings-password';
-import SettingsFollowersPage from './pages/settings-followers';
-import SuggestionsPage from './pages/suggestions';
-import TagPage from './pages/tag';
 import TagCloudPage from './pages/tag-cloud';
-import SchoolCloudPage from './pages/school-cloud';
-import GeotagCloudPage from './pages/geotag-cloud';
-import GeotagPage from './pages/geotag';
 
-import List from './pages/list';
-import Induction from './pages/induction';
-import Welcome from './pages/welcome';
 
 export function getRoutes(authHandler, fetchHandler) {
   let withoutAuth = fetchHandler;
@@ -61,41 +39,9 @@ export function getRoutes(authHandler, fetchHandler) {
 
   return (
     <Route component={App}>
-      <Route component={List} path="/" onEnter={withAuth} />
-      <Route component={Induction} path="/induction" onEnter={withAuth} />
-      <Route component={SuggestionsPage} path="/suggestions" onEnter={withAuth} />
-      <Route component={Welcome} path="/welcome" onEnter={withoutAuth} />
-      <Route component={Auth} path="/auth" onEnter={withoutAuth} />
-      <Route component={PostPage} path="/post/:uuid" onEnter={withoutAuth} />
-      <Route component={PostEditPage} path="/post/edit/:uuid" onEnter={withAuth} />
       <Route path="/tag">
         <IndexRoute component={TagCloudPage} onEnter={withoutAuth} />
-        <Route component={TagPage} path=":tag" onEnter={withoutAuth} />
       </Route>
-      <Route path="/settings">
-        <IndexRoute component={SettingsPage} onEnter={withAuth} />
-        <Route component={SettingsPasswordPage} path="password" onEnter={withAuth} />
-        <Route component={SettingsFollowersPage} path="followers" onEnter={withAuth} />
-      </Route>
-      <Route path="/user/:username">
-        <IndexRoute component={UserPage} onEnter={withoutAuth} />
-        <Route component={UserLikesPage} path="/user/:username/likes" onEnter={withoutAuth} />
-        <Route component={UserFavoritesPage} path="/user/:username/favorites" onEnter={withoutAuth} />
-        <Route component={AboutUserPage} path="/user/:username/bio" onEnter={withoutAuth} />
-      </Route>
-      <Route path="/s">
-        <IndexRoute component={SchoolCloudPage} onEnter={withoutAuth} />
-        <Route path="/s/:school_name">
-          <IndexRoute component={SchoolPage} onEnter={withoutAuth} />
-          <Route component={SchoolEditPage} path="/s/:school_name/edit" onEnter={withAuth} />
-        </Route>
-      </Route>
-      <Route path="/geo">
-        <IndexRoute component={GeotagCloudPage} onEnter={withoutAuth} />
-        <Route component={GeotagPage} path="/geo/:url_name" onEnter={withoutAuth} />
-      </Route>
-      <Route component={PasswordReset} path="/resetpassword" onEnter={withoutAuth} />
-      <Route component={NewPassword} path="/newpassword/:hash" onEnter={withoutAuth} />
     </Route>
   );
 }
