@@ -18,86 +18,6 @@
 import { isPlainObject, isNumber } from 'lodash';
 import { browserHistory } from 'react-router';
 
-/**
- * Combines onEnter handlers into one function.
- * The function calls handlers in specified order and returns early
- * if one of the handlers returns true.
- * @param handlers
- * @returns {Function}
- */
-export function combineHandlers(...handlers) {
-  return async (nextState, replace) => {
-    for (let handler of handlers) {
-      if (handler) {
-        let shouldInterrupt = await handler(nextState, replace);
-        if (shouldInterrupt === true) {
-          break;
-        }
-      }
-    }
-  }
-}
-
-export function combineHandlersAsync(...handlers) {
-  return async (nextState, replace, callback) => {
-    let callbacksTodo = 0;
-
-    let callbackDecreaser = () => {
-      callbacksTodo -= 1;
-
-      if (callbacksTodo === 0) {
-        callback();
-        return;
-      }
-
-      if (callbacksTodo < 0) {
-        throw new Error('too many callbacks called');
-      }
-    };
-
-    for (let handler of handlers) {
-      if (handler) {
-        if (handler.length >= 3) {
-          callbacksTodo += 1;
-
-          let shouldInterrupt = await handler(nextState, replace, callbackDecreaser);
-          if (shouldInterrupt === true) {
-            break;
-          }
-        } else {
-          let shouldInterrupt = await handler(nextState, replace);
-          if (shouldInterrupt === true) {
-            break;
-          }
-        }
-      }
-    }
-
-    if (callbacksTodo === 0) {
-      callback();
-    }
-  }
-}
-
-export class AuthHandler {
-  constructor(store) {
-    this.store = store;
-  }
-
-  handle = async (nextState, replace) => {
-    let state = this.store.getState();
-
-    if (state.getIn(['current_user', 'id']) === null
-      && nextState.location.pathname !== '/welcome'
-    ) {
-      replace('/welcome');
-      return true;  // interrupt
-    }
-
-    return false;
-  };
-}
-
 export class FetchHandler {
   status = null;
   redirectTo = null;
@@ -144,4 +64,3 @@ export class FetchHandler {
       });
   };
 }
-

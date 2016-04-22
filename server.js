@@ -27,28 +27,61 @@ import React from 'react';
 import { renderToString } from 'react-dom/server'
 import { createMemoryHistory } from 'history'
 import { Provider } from 'react-redux';
-import { Router, RouterContext, match, useRouterHistory } from 'react-router'
-import { syncHistoryWithStore } from 'react-router-redux';
+import { Router, Route, IndexRoute, RouterContext, match, useRouterHistory } from 'react-router'
 import Helmet from 'react-helmet';
 import ExecutionEnvironment from 'fbjs/lib/ExecutionEnvironment';
+import KoaRouter from 'koa-router';
+import request from 'superagent';
 
-import { getRoutes } from './src/routing';
-import { AuthHandler, FetchHandler } from './src/utils/loader';
+import { FetchHandler } from './src/utils/loader';
 import initBookshelf from './src/api/db';
 import { API_HOST } from './src/config';
-import ApiClient from './src/api/client'
-
 import { initState } from './src/store';
 import db_config from './knexfile';
-
-import KoaRouter from 'koa-router';
-
 import ApiController from './src/api/controller';
+import TagCloudPage from './src/pages/tag-cloud';
+import { ActionsTrigger } from './src/triggers';
+
+
+const SET_TAG_CLOUD = 'SET_TAG_CLOUD';
+
+function setTagCloud(hashtags) {
+  return {
+    type: SET_TAG_CLOUD,
+    hashtags
+  }
+}
+
+
+class ApiClient
+{
+  host;
+
+  constructor(host) {
+    this.host = host;
+  }
+
+  // apiUrl(relativeUrl) {
+  //   return `${this.host}${relativeUrl}`;
+  // }
+
+  // async get(relativeUrl, query = {}) {
+  //   let req = request
+  //     .get(this.apiUrl(relativeUrl))
+  //     .query(query);
+
+  //   return Promise.resolve(req);
+  // }
+
+  tagCloud() {
+    return Promise.resolve(['tag1', 'tag2']);
+  }
+}
 
 function initApi(bookshelf) {
   let controller = new ApiController(bookshelf);
 
-  let wrap =
+ let wrap =
     (handler) =>
       (ctx, next) =>
         handler(ctx, next)
@@ -69,6 +102,7 @@ function initApi(bookshelf) {
   return api.routes();
 }
 
+
 let exec_env = process.env.DB_ENV || 'development';
 
 let app = new Koa();
@@ -85,20 +119,45 @@ app.use(mount('/api/v1', api));
 app.use(async function reactMiddleware(ctx, next) {
   const store = initState();
 
-  const authHandler = new AuthHandler(store);
   const fetchHandler = new FetchHandler(store, new ApiClient(API_HOST, ctx));
-  const Routes = getRoutes(authHandler.handle, fetchHandler.handleSynchronously);
 
-  const makeRoutes = (history) => (
-    <Router history={history}>
+  function getRoutes(client) {
+
+    let onEnter = function(nextState) {
+      let len = nextState.routes.length;
+      for (let i = len; i--; i >= 0) {
+        let route = nextState.routes[i];
+
+        if ('component' in route && 'fetchData' in route.component) {
+          try {
+            let tags = ['tag1'];
+            store.dispatch(setTagCloud(tags));
+          } catch (e) {
+            console.log('error');
+          }
+        }
+      }
+
+      console.log('onenter finished');
+    } // end x
+
+    return (
+      <Route path="/tag">
+        <IndexRoute component={TagCloudPage} onEnter={onEnter} />
+      </Route>
+    );
+  }
+
+  const Routes = getRoutes(fetchHandler.apiClient);
+
+  const makeRoutes = () => (
+    <Router>
       {Routes}
     </Router>
   );
 
   const memoryHistory = useRouterHistory(createMemoryHistory)();
-  const history = syncHistoryWithStore(memoryHistory, store, { selectLocationState: state => state.get('routing') });
-  let routes = makeRoutes(history);
-
+  let routes = makeRoutes();
   match({ routes, location: ctx.url }, (error, redirectLocation, renderProps) => {
     try {
       let html = renderToString(
@@ -106,16 +165,14 @@ app.use(async function reactMiddleware(ctx, next) {
           <RouterContext {...renderProps}/>
         </Provider>
       );
+      console.log('rendered to string', html);
       let state = JSON.stringify(store.getState().toJS());
-
-      if (fetchHandler.status !== null) {
-        ctx.status = fetchHandler.status;
-      }
 
       const metadata = ExecutionEnvironment.canUseDOM ? Helmet.peek() : Helmet.rewind();
 
       ctx.staus = 200;
       ctx.body = template({state, html, metadata});
+      console.log('setting body react');
     } catch (e) {
       console.error(e.stack);
       ctx.status = 500;
@@ -123,7 +180,6 @@ app.use(async function reactMiddleware(ctx, next) {
     }
   });
 
-  await next();
 });
 
 export default app;

@@ -15,33 +15,3 @@
  You should have received a copy of the GNU Affero General Public License
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-import {
-  Route,
-  IndexRoute
-} from 'react-router';
-import React from 'react';
-
-import { combineHandlers, combineHandlersAsync } from './utils/loader';
-
-import App from './pages/app';
-import TagCloudPage from './pages/tag-cloud';
-
-
-export function getRoutes(authHandler, fetchHandler) {
-  let withoutAuth = fetchHandler;
-  let withAuth;
-
-  if (authHandler.length >= 3 || fetchHandler.length >= 3) {
-    withAuth = combineHandlersAsync(authHandler, fetchHandler);
-  } else {
-    withAuth = combineHandlers(authHandler, fetchHandler);
-  }
-
-  return (
-    <Route component={App}>
-      <Route path="/tag">
-        <IndexRoute component={TagCloudPage} onEnter={withoutAuth} />
-      </Route>
-    </Route>
-  );
-}

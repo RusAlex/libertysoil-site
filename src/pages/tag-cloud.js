@@ -17,66 +17,35 @@
  */
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import Helmet from 'react-helmet';
 
-import {
-  Page,
-  PageMain,
-  PageCaption,
-  PageBody,
-  PageContent
-} from '../components/page';
-import Header from '../components/header';
-import HeaderLogo from '../components/header-logo';
-import Breadcrumbs from '../components/breadcrumbs/breadcrumbs';
-import Footer from '../components/footer';
-import Sidebar from '../components/sidebar';
 import TagCloud from '../components/tag-cloud';
-import TagIcon from '../components/tag-icon';
 import { ActionsTrigger } from '../triggers';
 import { defaultSelector } from '../selectors';
-import { TAG_HASHTAG } from '../consts/tags';
 
 
 class TagCloudPage extends Component {
   static displayName = 'TagCloudPage';
 
+  componentDidMount() {
+    console.log('willreceive props');
+  }
+
   static async fetchData(params, store, client) {
     const triggers = new ActionsTrigger(client, store.dispatch);
-    await triggers.loadTagCloud();
+    try {
+      await triggers.loadTagCloud();
+      console.log('fetched data');
+    } catch (e) {
+      console.log(e);
+    }
+    return 'xxx';
   }
 
   render() {
-    const {
-      is_logged_in,
-      current_user
-    } = this.props;
-
+    console.log('render TagCloudPage', this.props.tag_cloud);
     return (
       <div>
-        <Helmet title="Tags of " />
-        <Header is_logged_in={is_logged_in} current_user={current_user}>
-          <HeaderLogo small />
-          <Breadcrumbs title="All Hashtags">
-            <TagIcon big type={TAG_HASHTAG} />
-          </Breadcrumbs>
-        </Header>
-
-        <Page>
-          <Sidebar current_user={this.props.current_user} />
-          <PageMain className="page__main-no_space">
-            <PageBody>
-              <PageContent>
-                <PageCaption>Tag cloud</PageCaption>
-                <div className="layout__row">
-                  <TagCloud hashtags={this.props.tag_cloud}/>
-                </div>
-              </PageContent>
-            </PageBody>
-          </PageMain>
-        </Page>
-
-        <Footer/>
+        <TagCloud hashtags={this.props.tag_cloud}/>
       </div>
     )
   }
