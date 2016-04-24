@@ -49,20 +49,14 @@ app.use(function *(next) {
   ];
   yield next;
   match({ routes, location: this.url }, (error, redirectLocation, renderProps) => {
-    try {
-      fetch('http://localhost:8000/api/v1/tag-cloud')
-        .then(function(res) {
-          return res.json();
-        }).then(function(json) {
-          console.log(json);
-        });
-      this.status = 200;
-      this.body = 'Test';
-    } catch (e) {
-      console.error(e.stack);
-      this.status = 500;
-      this.body = e.message;
-    }
+    fetch('http://localhost:8000/api/v1/tag-cloud')
+      .then(function(res) {
+        return res.json();
+      }).then(function(json) {
+        this.status = 200;
+        this.body = 'JsonTest';
+        console.log(json);
+      });
   });
 });
 
