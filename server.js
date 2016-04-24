@@ -16,170 +16,61 @@
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 /*eslint-env node */
-import path from 'path';
-import fs from 'fs';
+var Koa = require('koa');
+var mount = require('koa-mount');
+var React = require('react');
+var fetch = require('node-fetch');
+var Router = require('react-router').Router;
+var Route = require('react-router').Route;
+var IndexRoute = require('react-router').IndexRoute;
+var match = require('react-router').match;
+var KoaRouter = require('koa-router');
+var app = new Koa();
 
-import Koa from 'koa';
-import mount from 'koa-mount';
-import ejs from 'ejs';
+app.use(mount('/api/v1', function() {
+  var simpleAction = function(ctx) {
+    ctx.status = 200;
+    ctx.body = ['tag1', 'tag2'];
+  };
 
-import React from 'react';
-import { renderToString } from 'react-dom/server'
-import { createMemoryHistory } from 'history'
-import { Provider } from 'react-redux';
-import { Router, Route, IndexRoute, RouterContext, match, useRouterHistory } from 'react-router'
-import Helmet from 'react-helmet';
-import ExecutionEnvironment from 'fbjs/lib/ExecutionEnvironment';
-import KoaRouter from 'koa-router';
-import request from 'superagent';
+  var api = new KoaRouter();
 
-import { FetchHandler } from './src/utils/loader';
-import initBookshelf from './src/api/db';
-import { API_HOST } from './src/config';
-import { initState } from './src/store';
-import db_config from './knexfile';
-import ApiController from './src/api/controller';
-import TagCloudPage from './src/pages/tag-cloud';
-import { ActionsTrigger } from './src/triggers';
-
-
-const SET_TAG_CLOUD = 'SET_TAG_CLOUD';
-
-function setTagCloud(hashtags) {
-  return {
-    type: SET_TAG_CLOUD,
-    hashtags
-  }
-}
-
-
-class ApiClient
-{
-  host;
-
-  constructor(host) {
-    this.host = host;
-  }
-
-  // apiUrl(relativeUrl) {
-  //   return `${this.host}${relativeUrl}`;
-  // }
-
-  // async get(relativeUrl, query = {}) {
-  //   let req = request
-  //     .get(this.apiUrl(relativeUrl))
-  //     .query(query);
-
-  //   return Promise.resolve(req);
-  // }
-
-  tagCloud() {
-    return Promise.resolve(['tag1', 'tag2']);
-  }
-}
-
-function initApi(bookshelf) {
-  let controller = new ApiController(bookshelf);
-
- let wrap =
-    (handler) =>
-      (ctx, next) =>
-        handler(ctx, next)
-          .catch((e) => {
-            console.log(`an error was thrown from url-handler of ${ctx.req.originalUrl}:\n`, e);  // eslint-disable-line no-console
-
-            ctx.status = 500;
-            ctx.body = {error: 'Internal Server Error'};
-            // res.status(500);
-            // res.send({error: 'Internal Server Error'});
-          });
-
-  let api = new KoaRouter();
-
-  api.get('/test', controller.test);
-  api.get('/tag-cloud', wrap(controller.getTagCloud.bind(controller)));
+  api.get('/tag-cloud', simpleAction);
 
   return api.routes();
-}
+}()));
 
-
-let exec_env = process.env.DB_ENV || 'development';
-
-let app = new Koa();
-
-let knexConfig = db_config[exec_env];
-let bookshelf = initBookshelf(knexConfig);
-let api = initApi(bookshelf);
-
-let templatePath = path.join(__dirname, '/src/views/index.ejs');
-let template = ejs.compile(fs.readFileSync(templatePath, 'utf8'), {filename: templatePath});
-
-app.use(mount('/api/v1', api));
-
-app.use(async function reactMiddleware(ctx, next) {
-  const store = initState();
-
-  const fetchHandler = new FetchHandler(store, new ApiClient(API_HOST, ctx));
-
-  function getRoutes(client) {
-
-    let onEnter = function(nextState) {
-      let len = nextState.routes.length;
-      for (let i = len; i--; i >= 0) {
-        let route = nextState.routes[i];
-
-        if ('component' in route && 'fetchData' in route.component) {
-          try {
-            let tags = ['tag1'];
-            store.dispatch(setTagCloud(tags));
-          } catch (e) {
-            console.log('error');
-          }
-        }
-      }
-
-      console.log('onenter finished');
-    } // end x
-
-    return (
-      <Route path="/tag">
-        <IndexRoute component={TagCloudPage} onEnter={onEnter} />
-      </Route>
-    );
-  }
-
-  const Routes = getRoutes(fetchHandler.apiClient);
-
-  const makeRoutes = () => (
-    <Router>
-      {Routes}
-    </Router>
-  );
-
-  const memoryHistory = useRouterHistory(createMemoryHistory)();
-  let routes = makeRoutes();
-  match({ routes, location: ctx.url }, (error, redirectLocation, renderProps) => {
+app.use(function *(next) {
+  var testComponent = new React.Component;
+  const routes = [
+    { path: '/tag',
+      component: testComponent
+    }
+  ];
+  yield next;
+  match({ routes, location: this.url }, (error, redirectLocation, renderProps) => {
     try {
-      let html = renderToString(
-        <Provider store={store}>
-          <RouterContext {...renderProps}/>
-        </Provider>
-      );
-      console.log('rendered to string', html);
-      let state = JSON.stringify(store.getState().toJS());
-
-      const metadata = ExecutionEnvironment.canUseDOM ? Helmet.peek() : Helmet.rewind();
-
-      ctx.staus = 200;
-      ctx.body = template({state, html, metadata});
-      console.log('setting body react');
+      fetch('http://localhost:8000/api/v1/tag-cloud')
+        .then(function(res) {
+          return res.json();
+        }).then(function(json) {
+          console.log(json);
+        });
+      this.status = 200;
+      this.body = 'Test';
     } catch (e) {
       console.error(e.stack);
-      ctx.status = 500;
-      ctx.body = e.message;
+      this.status = 500;
+      this.body = e.message;
     }
   });
-
 });
 
-export default app;
+app.listen(8000, function (err) {
+  if (err) {
+    console.error(err);  // eslint-disable-line no-console
+    process.exit(1);
+  }
+
+  process.stdout.write(`Listening at http://0.0.0.0:8000\n`);
+});
